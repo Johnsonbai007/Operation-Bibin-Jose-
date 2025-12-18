@@ -36,6 +36,11 @@ const GameView: React.FC<Props> = ({
 }) => {
   const [isRevealed, setIsRevealed] = useState(false);
   const isImposter = gameData.role === 'IMPOSTER';
+  
+  // Get current player's info from the players list
+  const currentPlayer = gameData.players.find(p => p.id === localStorage.getItem('myPlayerId'));
+  const myNickname = currentPlayer?.nickname || 'You';
+  const myEmoji = currentPlayer?.emoji || '👤';
 
   const mostVoted = useMemo(() => {
     let max = -1;
@@ -52,7 +57,7 @@ const GameView: React.FC<Props> = ({
   const allVotesIn = votesReceived >= totalPlayers;
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-between py-4 space-y-6 animate-fadeIn overflow-y-auto">
+    <div className="w-full min-h-full flex flex-col items-center py-4 space-y-6 animate-fadeIn overflow-y-auto">
       
       {phase === 'REVEAL' && (
         <>
@@ -86,6 +91,12 @@ const GameView: React.FC<Props> = ({
               <div className={`absolute inset-0 backface-hidden rounded-3xl flex flex-col items-center justify-center p-8 border-4 [transform:rotateY(180deg)] ${
                 isImposter ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'
               }`}>
+                {/* Player Info */}
+                <div className="mb-4 flex items-center gap-2 bg-white/70 px-4 py-2 rounded-full">
+                  <span className="text-2xl">{myEmoji}</span>
+                  <span className="text-sm font-bold text-slate-700">{myNickname}</span>
+                </div>
+
                 <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mb-4 ${isImposter ? 'bg-red-100' : 'bg-emerald-100'}`}>
                   <span className="text-4xl">{isImposter ? '🕵️' : '👤'}</span>
                 </div>
@@ -146,7 +157,7 @@ const GameView: React.FC<Props> = ({
       )}
 
       {phase === 'VOTING' && (
-        <div className="w-full flex-1 space-y-6 flex flex-col items-center justify-center animate-fadeIn">
+        <div className="w-full space-y-6 flex flex-col items-center animate-fadeIn pb-4">
           <div className="text-center space-y-2">
             <h2 className="text-3xl font-bold text-slate-800">Vote Now</h2>
             <p className="text-sm font-bold text-amber-600 uppercase tracking-wider">Who is the Imposter?</p>
@@ -201,7 +212,7 @@ const GameView: React.FC<Props> = ({
       )}
 
       {phase === 'RESULT' && gameOverData && (
-        <div className="w-full flex-1 flex flex-col items-center justify-center space-y-8 animate-fadeIn text-center px-4">
+        <div className="w-full flex flex-col items-center space-y-8 animate-fadeIn text-center px-4 pb-4">
           <div className={`p-6 rounded-full ${gameOverData.winner === 'CITIZENS' ? 'bg-emerald-100' : 'bg-red-100'}`}>
             <span className="text-6xl">{gameOverData.winner === 'CITIZENS' ? '🎉' : '💀'}</span>
           </div>

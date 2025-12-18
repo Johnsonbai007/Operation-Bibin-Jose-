@@ -32,6 +32,7 @@ const App: React.FC = () => {
   const [gamePhase, setGamePhase] = useState<'REVEAL' | 'VOTING' | 'RESULT'>('REVEAL');
   const [connState, setConnState] = useState<ConnectionState>('IDLE');
   const [error, setError] = useState<string | null>(null);
+  const [lastRoomCode, setLastRoomCode] = useState<string | null>(null);
   
   const [myGameData, setMyGameData] = useState<GameStartPayload | null>(null);
   const [gameOverData, setGameOverData] = useState<GameOverPayload | null>(null);
@@ -46,7 +47,19 @@ const App: React.FC = () => {
 
   useEffect(() => {
     setNickname(getOrSetNickname());
+    // Load last room code if available
+    const savedRoomCode = localStorage.getItem('lastRoomCode');
+    if (savedRoomCode) {
+      setLastRoomCode(savedRoomCode);
+    }
   }, []);
+
+  const handleNicknameChange = (newNickname: string) => {
+    if (newNickname.trim()) {
+      setNickname(newNickname);
+      localStorage.setItem('p2p_nickname', newNickname);
+    }
+  };
 
   // Broadcast message to all connected peers
   const broadcast = useCallback((msg: PeerMessage) => {
@@ -192,7 +205,10 @@ const App: React.FC = () => {
     setConnState('CONNECTING');
 
     peer.on('open', (id) => {
+      localStorage.setItem('myPlayerId', id);
+      localStorage.setItem('lastRoomCode', id);
       setRoomCode(id);
+      setLastRoomCode(id);
       setIsHost(true);
       setPlayers([{ id, nickname, isHost: true, emoji: getPlayerEmoji(0) }]);
       setGameState('LOBBY');
@@ -227,11 +243,14 @@ const App: React.FC = () => {
     setConnState('CONNECTING');
 
     peer.on('open', (myId) => {
+      localStorage.setItem('myPlayerId', myId);
       const conn = peer.connect(code, { reliable: true });
       conn.on('open', () => {
         connectionsRef.current.set(code, conn);
+        localStorage.setItem('lastRoomCode', code);
         setIsHost(false);
         setRoomCode(code);
+        setLastRoomCode(code);
         setGameState('LOBBY');
         setConnState('CONNECTED');
         conn.send({ type: MessageType.JOIN, payload: { nickname } });
@@ -252,8 +271,10 @@ const App: React.FC = () => {
   const startGame = (settings: GameSettings) => {
     if (!isHost || players.length < 3) return;
 
+    // Shuffle the words array and pick the first one for better randomization
     const themeWords = WORD_DATABASE[settings.theme as ThemeName];
-    const word = themeWords[Math.floor(Math.random() * themeWords.length)];
+    const shuffledWords = [...themeWords].sort(() => Math.random() - 0.5);
+    const word = shuffledWords[0];
     currentWord.current = word;
 
     const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
@@ -379,15 +400,26 @@ const App: React.FC = () => {
     setConnState('IDLE');
     setError(null);
     setMyGameData(null);
+    // Keep lastRoomCode for rejoin functionality
+  };
+
+  const rejoinRoom = () => {
+    if (lastRoomCode) {
+      setError(null);
+      joinRoom(lastRoomCode);
+    }
   };
 
   return (
-    <div className="min-h-screen max-w-md mx-auto bg-white flex flex-col items-center justify-center p-6 sm:p-8">
+    <div className="min-h-screen max-w-md mx-auto bg-white flex flex-col items-center p-6 sm:p-8 overflow-y-auto">
       {gameState === 'SETUP' && (
         <JoinScreen 
           nickname={nickname}
+          onNicknameChange={handleNicknameChange}
           onCreate={() => setupHost(generateRoomCode())} 
-          onJoin={joinRoom} 
+          onJoin={joinRoom}
+          onRejoin={rejoinRoom}
+          lastRoomCode={lastRoomCode}
           isLoading={connState === 'CONNECTING'}
           error={error}
         />
