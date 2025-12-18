@@ -17,7 +17,7 @@ const Lobby: React.FC<Props> = ({ roomCode, players, isHost, onStart, onLeave })
   const canStart = players.length >= 3;
 
   return (
-    <div className="w-full h-full flex flex-col space-y-5 animate-fadeIn">
+    <div className="w-full min-h-full flex flex-col space-y-5 animate-fadeIn pb-4">
       {/* Room Code Header */}
       <div className="text-center py-4 bg-slate-900 rounded-2xl">
         <span className="text-[10px] font-bold tracking-widest text-slate-400 uppercase block mb-1">Room Code</span>
