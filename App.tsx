@@ -3,10 +3,25 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Peer, DataConnection } from 'peerjs';
 import { getOrSetNickname, generateRoomCode } from './utils/identity';
 import { MessageType, Player, PeerMessage, ConnectionState, GameStartPayload, GameSettings, GameOverPayload } from './types';
-import { WORD_DATABASE, THEMES, ThemeName } from './constants';
+import { WORD_DATABASE, THEMES, ThemeName, getPlayerEmoji } from './constants';
 import Lobby from './components/Lobby';
 import JoinScreen from './components/JoinScreen';
 import GameView from './components/GameView';
+
+// PeerJS configuration for production (works with Vercel/cloud hosting)
+const PEER_CONFIG = {
+  config: {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' },
+      { urls: 'stun:global.stun.twilio.com:3478' },
+    ]
+  },
+  debug: 0, // Disable debug logs for production
+};
 
 const App: React.FC = () => {
   const [nickname, setNickname] = useState<string>('');
@@ -20,8 +35,8 @@ const App: React.FC = () => {
   
   const [myGameData, setMyGameData] = useState<GameStartPayload | null>(null);
   const [gameOverData, setGameOverData] = useState<GameOverPayload | null>(null);
-  const [votes, setVotes] = useState<Record<string, number>>({}); // Tally for host
-  const [votesReceived, setVotesReceived] = useState<number>(0); // Track total votes received
+  const [votes, setVotes] = useState<Record<string, number>>({});
+  const [votesReceived, setVotesReceived] = useState<number>(0);
   const [hasVoted, setHasVoted] = useState(false);
 
   const peerRef = useRef<Peer | null>(null);
@@ -33,12 +48,11 @@ const App: React.FC = () => {
     setNickname(getOrSetNickname());
   }, []);
 
+  // Broadcast message to all connected peers
   const broadcast = useCallback((msg: PeerMessage) => {
     connectionsRef.current.forEach((conn) => {
       if (conn.open) {
         conn.send(msg);
-      } else {
-        conn.once('open', () => conn.send(msg));
       }
     });
   }, []);
@@ -46,14 +60,14 @@ const App: React.FC = () => {
   const handleMessage = useCallback((msg: PeerMessage, senderId: string) => {
     switch (msg.type) {
       case MessageType.JOIN:
-        const newPlayer: Player = {
-          id: senderId,
-          nickname: msg.payload.nickname,
-          isHost: false
-        };
-        
         setPlayers(prev => {
           if (prev.find(p => p.id === senderId)) return prev;
+          const newPlayer: Player = {
+            id: senderId,
+            nickname: msg.payload.nickname,
+            isHost: false,
+            emoji: getPlayerEmoji(prev.length) // Assign emoji based on join order
+          };
           const updated = [...prev, newPlayer];
           broadcast({ type: MessageType.PLAYER_LIST, payload: updated });
           return updated;
@@ -106,15 +120,81 @@ const App: React.FC = () => {
     }
   }, [broadcast, isHost]);
 
+  // Auto-finalize voting when all players have voted
+  useEffect(() => {
+    if (!isHost || gamePhase !== 'VOTING') return;
+    if (votesReceived < players.length || players.length === 0) return;
+    
+    // Find most voted player
+    let maxVotes = -1;
+    let mostVotedId = "";
+    (Object.entries(votes) as [string, number][]).forEach(([id, count]) => {
+      if (count > maxVotes) {
+        maxVotes = count;
+        mostVotedId = id;
+      }
+    });
+    
+    if (mostVotedId) {
+      // Small delay to allow UI to update before finalizing
+      const timer = setTimeout(() => {
+        const isCorrect = currentImposterIds.current.has(mostVotedId);
+        
+        if (isCorrect) {
+          // Civilians win
+          const imposters = players.filter(p => currentImposterIds.current.has(p.id)).map(p => p.nickname);
+          const payload: GameOverPayload = {
+            winner: 'CITIZENS',
+            imposters,
+            secretWord: currentWord.current
+          };
+          setGameOverData(payload);
+          setGamePhase('RESULT');
+          broadcast({ type: MessageType.GAME_OVER, payload });
+        } else {
+          // Wrong guess - restart round with new speaker but same word
+          const shuffled = [...players].sort(() => Math.random() - 0.5);
+          const validStartingPlayers = shuffled.filter(p => !currentImposterIds.current.has(p.id));
+          const startingPlayer = validStartingPlayers[Math.floor(Math.random() * validStartingPlayers.length)];
+
+          players.forEach(p => {
+            const isImposter = currentImposterIds.current.has(p.id);
+            const startPayload: GameStartPayload = {
+              role: isImposter ? 'IMPOSTER' : 'CITIZEN',
+              word: isImposter ? '???' : currentWord.current,
+              startingPlayerNickname: startingPlayer.nickname,
+              theme: myGameData!.theme,
+              players: players
+            };
+
+            if (p.id === peerRef.current?.id) {
+              setMyGameData(startPayload);
+              setGamePhase('REVEAL');
+              setHasVoted(false);
+              setVotes({});
+              setVotesReceived(0);
+            } else {
+              const conn = connectionsRef.current.get(p.id);
+              if (conn && conn.open) {
+                conn.send({ type: MessageType.GAME_START, payload: startPayload });
+              }
+            }
+          });
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isHost, gamePhase, votesReceived, players, votes, broadcast, myGameData]);
+
   const setupHost = (code: string) => {
-    const peer = new Peer(code);
+    const peer = new Peer(code, PEER_CONFIG);
     peerRef.current = peer;
     setConnState('CONNECTING');
 
     peer.on('open', (id) => {
       setRoomCode(id);
       setIsHost(true);
-      setPlayers([{ id, nickname, isHost: true }]);
+      setPlayers([{ id, nickname, isHost: true, emoji: getPlayerEmoji(0) }]);
       setGameState('LOBBY');
       setConnState('CONNECTED');
     });
@@ -142,7 +222,7 @@ const App: React.FC = () => {
   };
 
   const joinRoom = (code: string) => {
-    const peer = new Peer();
+    const peer = new Peer(undefined, PEER_CONFIG);
     peerRef.current = peer;
     setConnState('CONNECTING');
 

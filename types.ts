@@ -14,6 +14,7 @@ export interface Player {
   id: string;
   nickname: string;
   isHost: boolean;
+  emoji: string; // Unique emoji for each player
 }
 
 export interface GameSettings {

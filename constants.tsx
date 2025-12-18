@@ -9,6 +9,17 @@ export const ANIMALS = [
   'Dolphin', 'Tiger', 'Fox', 'Raven', 'Bear', 'Owl', 'Stag', 'Cobra'
 ];
 
+// Unique player emojis - each player gets assigned one based on join order
+export const PLAYER_EMOJIS = [
+  '🦊', '🐼', '🦁', '🐯', '🐺', '🦅', '🦉', '🐙',
+  '🦋', '🐬', '🦈', '🐢', '🦩', '🦚', '🐍', '🦎'
+];
+
+// Get emoji for a player based on their index
+export const getPlayerEmoji = (index: number): string => {
+  return PLAYER_EMOJIS[index % PLAYER_EMOJIS.length];
+};
+
 export const WORD_DATABASE = {
   Nature: [
     'Waterfall', 'Mountain', 'Volcano', 'Glacier', 'Forest', 'Desert', 'Canyon', 'Ocean', 'Cave', 'Island'

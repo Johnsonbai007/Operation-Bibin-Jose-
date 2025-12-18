@@ -17,27 +17,29 @@ const Lobby: React.FC<Props> = ({ roomCode, players, isHost, onStart, onLeave })
   const canStart = players.length >= 3;
 
   return (
-    <div className="w-full h-full flex flex-col space-y-6 animate-fadeIn">
-      <div className="text-center space-y-2">
-        <span className="text-[10px] font-bold tracking-widest text-gray-400 uppercase">Room Code</span>
-        <div className="text-5xl font-mono font-bold tracking-widest text-gray-900 select-all cursor-pointer">
+    <div className="w-full h-full flex flex-col space-y-5 animate-fadeIn">
+      {/* Room Code Header */}
+      <div className="text-center py-4 bg-slate-900 rounded-2xl">
+        <span className="text-[10px] font-bold tracking-widest text-slate-400 uppercase block mb-1">Room Code</span>
+        <div className="text-4xl font-mono font-bold tracking-[0.3em] text-white select-all cursor-pointer">
           {roomCode}
         </div>
       </div>
 
+      {/* Host Settings */}
       {isHost && (
-        <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 space-y-4">
+        <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 space-y-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Theme</label>
+            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Theme</label>
             <div className="grid grid-cols-2 gap-2">
               {THEMES.map(theme => (
                 <button
                   key={theme}
                   onClick={() => setSelectedTheme(theme)}
-                  className={`py-2 px-3 rounded-lg text-xs font-medium transition-all border ${
+                  className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all border-2 ${
                     selectedTheme === theme 
-                    ? 'bg-gray-900 text-white border-gray-900' 
-                    : 'bg-white text-gray-600 border-gray-200'
+                    ? 'bg-slate-900 text-white border-slate-900' 
+                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
                   }`}
                 >
                   {theme}
@@ -47,17 +49,17 @@ const Lobby: React.FC<Props> = ({ roomCode, players, isHost, onStart, onLeave })
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Imposters</label>
-            <div className="flex bg-white rounded-lg p-1 border border-gray-200">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Imposters</label>
+            <div className="flex bg-white rounded-xl p-1 border-2 border-slate-200">
               {[1, 2].map(count => (
                 <button
                   key={count}
                   onClick={() => setImposterCount(count)}
                   disabled={players.length <= count + 1}
-                  className={`flex-1 py-2 rounded-md text-xs font-medium transition-all ${
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
                     imposterCount === count 
-                    ? 'bg-gray-900 text-white' 
-                    : 'text-gray-400'
+                    ? 'bg-slate-900 text-white' 
+                    : 'text-slate-400 hover:text-slate-600'
                   } disabled:opacity-20`}
                 >
                   {count}
@@ -68,51 +70,55 @@ const Lobby: React.FC<Props> = ({ roomCode, players, isHost, onStart, onLeave })
         </div>
       )}
 
+      {/* Players List */}
       <div className="flex-1 space-y-3">
         <div className="flex justify-between items-center px-1">
-          <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500">
             Players ({players.length})
           </h2>
-          <span className="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-1 rounded uppercase font-bold">
-            Live
+          <span className="text-[10px] bg-emerald-500 text-white px-2.5 py-1 rounded-full uppercase font-bold">
+            ● Live
           </span>
         </div>
         
-        <div className="space-y-2 max-h-[30vh] overflow-y-auto pr-1">
+        <div className="space-y-2 max-h-[35vh] overflow-y-auto">
           {players.map((player) => (
             <div 
               key={player.id}
-              className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100 shadow-sm"
+              className="flex items-center justify-between p-3.5 bg-white rounded-xl border-2 border-slate-100"
             >
               <div className="flex items-center space-x-3">
-                <div className={`w-2 h-2 rounded-full ${player.isHost ? 'bg-amber-400' : 'bg-emerald-400'}`}></div>
-                <span className="text-sm font-medium text-gray-800">{player.nickname}</span>
+                <span className="text-2xl">{player.emoji}</span>
+                <span className="text-sm font-semibold text-slate-800">{player.nickname}</span>
               </div>
               {player.isHost && (
-                <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded uppercase tracking-widest border border-amber-100">Host</span>
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full uppercase tracking-wide">
+                  Host
+                </span>
               )}
             </div>
           ))}
         </div>
       </div>
 
-      <div className="space-y-3 pt-4 border-t border-gray-100">
+      {/* Action Buttons */}
+      <div className="space-y-3 pt-3 border-t-2 border-slate-100">
         {isHost ? (
           <button
             onClick={() => onStart({ theme: selectedTheme, imposterCount })}
             disabled={!canStart}
-            className="w-full py-4 bg-gray-900 text-white rounded-xl font-medium tracking-wide shadow-xl active:scale-95 transition-all disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
+            className="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold text-sm tracking-wide active:scale-[0.98] transition-all disabled:bg-slate-200 disabled:text-slate-400"
           >
-            Start Game
+            {canStart ? 'Start Game' : `Need ${3 - players.length} more player(s)`}
           </button>
         ) : (
-          <div className="text-center py-4 text-xs text-gray-400 font-medium italic animate-pulse">
-            Host is choosing settings...
+          <div className="text-center py-4 text-sm text-slate-400 font-medium">
+            Waiting for host to start the game...
           </div>
         )}
         <button
           onClick={onLeave}
-          className="w-full py-2 text-gray-400 rounded-xl font-medium text-[10px] tracking-widest uppercase hover:text-gray-900 transition-all"
+          className="w-full py-3 text-slate-400 rounded-xl font-bold text-xs tracking-widest uppercase hover:text-red-500 transition-all"
         >
           Exit Room
         </button>
