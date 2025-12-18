@@ -1,0 +1,5 @@
+{
+  "name": "P2P Lobby System",
+  "description": "A minimalist P2P lobby system built with PeerJS for real-time mobile-optimized multiplayer experiences.",
+  "requestFramePermissions": []
+}
