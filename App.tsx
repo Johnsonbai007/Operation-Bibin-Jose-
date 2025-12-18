@@ -21,6 +21,7 @@ const App: React.FC = () => {
   const [myGameData, setMyGameData] = useState<GameStartPayload | null>(null);
   const [gameOverData, setGameOverData] = useState<GameOverPayload | null>(null);
   const [votes, setVotes] = useState<Record<string, number>>({}); // Tally for host
+  const [votesReceived, setVotesReceived] = useState<number>(0); // Track total votes received
   const [hasVoted, setHasVoted] = useState(false);
 
   const peerRef = useRef<Peer | null>(null);
@@ -82,6 +83,7 @@ const App: React.FC = () => {
             ...prev,
             [votedPlayerId]: (prev[votedPlayerId] || 0) + 1
           }));
+          setVotesReceived(prev => prev + 1);
         }
         break;
 
@@ -95,6 +97,7 @@ const App: React.FC = () => {
         setMyGameData(null);
         setGameOverData(null);
         setVotes({});
+        setVotesReceived(0);
         setHasVoted(false);
         break;
 
@@ -209,6 +212,7 @@ const App: React.FC = () => {
   const initiateVote = () => {
     if (!isHost) return;
     setVotes({});
+    setVotesReceived(0);
     broadcast({ type: MessageType.VOTE_PHASE, payload: {} });
     setGamePhase('VOTING');
   };
@@ -216,13 +220,16 @@ const App: React.FC = () => {
   const castVote = (votedId: string) => {
     setHasVoted(true);
     if (isHost) {
+      // Host votes directly - count their vote immediately
       setVotes(prev => ({
         ...prev,
         [votedId]: (prev[votedId] || 0) + 1
       }));
+      setVotesReceived(prev => prev + 1);
     } else {
+      // Non-host sends vote to host
       const conn = connectionsRef.current.get(roomCode!);
-      if (conn) {
+      if (conn && conn.open) {
         conn.send({ type: MessageType.CAST_VOTE, payload: { votedId } });
       }
     }
@@ -279,6 +286,7 @@ const App: React.FC = () => {
     setMyGameData(null);
     setGameOverData(null);
     setVotes({});
+    setVotesReceived(0);
     setHasVoted(false);
     broadcast({ type: MessageType.RESET_LOBBY, payload: {} });
   };
@@ -323,6 +331,8 @@ const App: React.FC = () => {
           isHost={isHost}
           hasVoted={hasVoted}
           votes={votes}
+          votesReceived={votesReceived}
+          totalPlayers={players.length}
           onInitiateVote={initiateVote}
           onCastVote={castVote}
           onFinalizeVote={finalizeVote}

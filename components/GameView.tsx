@@ -10,6 +10,8 @@ interface Props {
   isHost: boolean;
   hasVoted: boolean;
   votes: Record<string, number>;
+  votesReceived: number;
+  totalPlayers: number;
   onInitiateVote: () => void;
   onCastVote: (id: string) => void;
   onFinalizeVote: (id: string) => void;
@@ -24,6 +26,8 @@ const GameView: React.FC<Props> = ({
   isHost, 
   hasVoted, 
   votes,
+  votesReceived,
+  totalPlayers,
   onInitiateVote, 
   onCastVote, 
   onFinalizeVote,
@@ -166,6 +170,11 @@ const GameView: React.FC<Props> = ({
           <div className="text-center space-y-2">
             <h2 className="text-3xl font-light text-gray-900">Cast Your Vote</h2>
             <p className="text-xs font-bold text-amber-500 uppercase tracking-widest">Identify the Imposter</p>
+            {isHost && (
+              <p className="text-xs text-gray-400 mt-2">
+                Votes received: {votesReceived} / {totalPlayers}
+              </p>
+            )}
           </div>
 
           <div className="w-full grid grid-cols-1 gap-3 px-4">
