@@ -35,10 +35,16 @@ const GameView: React.FC<Props> = ({
   onEnd 
 }) => {
   const [isRevealed, setIsRevealed] = useState(false);
+  const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
   const isImposter = gameData.role === 'IMPOSTER';
   
+  // Load player ID from localStorage on mount
+  React.useEffect(() => {
+    setMyPlayerId(localStorage.getItem('myPlayerId'));
+  }, []);
+  
   // Get current player's info from the players list
-  const currentPlayer = gameData.players.find(p => p.id === localStorage.getItem('myPlayerId'));
+  const currentPlayer = gameData.players.find(p => p.id === myPlayerId);
   const myNickname = currentPlayer?.nickname || 'You';
   const myEmoji = currentPlayer?.emoji || '👤';
 

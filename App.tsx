@@ -166,7 +166,7 @@ const App: React.FC = () => {
           broadcast({ type: MessageType.GAME_OVER, payload });
         } else {
           // Wrong guess - restart round with new speaker but same word
-          const shuffled = [...players].sort(() => Math.random() - 0.5);
+          const shuffled = shuffleArray(players);
           const validStartingPlayers = shuffled.filter(p => !currentImposterIds.current.has(p.id));
           const startingPlayer = validStartingPlayers[Math.floor(Math.random() * validStartingPlayers.length)];
 
@@ -206,9 +206,8 @@ const App: React.FC = () => {
 
     peer.on('open', (id) => {
       localStorage.setItem('myPlayerId', id);
-      localStorage.setItem('lastRoomCode', id);
+      // Don't set lastRoomCode for hosts since they don't rejoin their own rooms
       setRoomCode(id);
-      setLastRoomCode(id);
       setIsHost(true);
       setPlayers([{ id, nickname, isHost: true, emoji: getPlayerEmoji(0) }]);
       setGameState('LOBBY');
@@ -268,16 +267,26 @@ const App: React.FC = () => {
     });
   };
 
+  // Fisher-Yates shuffle algorithm for proper randomization
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   const startGame = (settings: GameSettings) => {
     if (!isHost || players.length < 3) return;
 
     // Shuffle the words array and pick the first one for better randomization
     const themeWords = WORD_DATABASE[settings.theme as ThemeName];
-    const shuffledWords = [...themeWords].sort(() => Math.random() - 0.5);
+    const shuffledWords = shuffleArray(themeWords);
     const word = shuffledWords[0];
     currentWord.current = word;
 
-    const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
+    const shuffledPlayers = shuffleArray(players);
     const imposterCount = Math.min(settings.imposterCount, players.length - 1);
     const imposterIds = new Set(shuffledPlayers.slice(0, imposterCount).map(p => p.id));
     currentImposterIds.current = imposterIds;
@@ -353,7 +362,7 @@ const App: React.FC = () => {
       broadcast({ type: MessageType.GAME_OVER, payload });
     } else {
       // Wrong guess - restart round with new speaker but same word
-      const shuffled = [...players].sort(() => Math.random() - 0.5);
+      const shuffled = shuffleArray(players);
       const validStartingPlayers = shuffled.filter(p => !currentImposterIds.current.has(p.id));
       const startingPlayer = validStartingPlayers[Math.floor(Math.random() * validStartingPlayers.length)];
 
